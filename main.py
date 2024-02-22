@@ -1,9 +1,19 @@
-import numpy as np
-import json
 import os
-import matplotlib
-import matplotlib.pyplot as plt
+import json
 import codecs
+try:
+    import numpy as np
+except ModuleNotFoundError:
+    print('\nNumPy not found, installing...\n')
+    os.system("python -m pip install numpy")
+    import numpy as np
+try:
+    import matplotlib
+except ModuleNotFoundError:
+    print('\nMatPlotLib not found, installing...\n')
+    os.system("python -m pip install matplotlib")
+    import matplotlib
+import matplotlib.pyplot as plt
 # from PIL import Image
 # matplotlib.use('Qt5Agg')
 
