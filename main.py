@@ -18,12 +18,14 @@ import matplotlib.pyplot as plt
 # matplotlib.use('Qt5Agg')
 
 class RawSubplotData():
-    def __init__(self, pltype, x, y, xerr, yerr, axes_labels, axes_pupils, color, fmt, description):
+    def __init__(self, pltype, x, y, xerr_mode, xerr, yerr_mode, yerr, axes_labels, axes_pupils, color, fmt, description):
         self.type = pltype
         self.color = color
         self.x = x
         self.y = y
+        self.xerr_mode = xerr_mode
         self.xerr = xerr
+        self.yerr_mode = yerr_mode
         self.yerr = yerr
         self.axes_labels = axes_labels
         self.axes_pupils = axes_pupils
@@ -35,7 +37,9 @@ class RawSubplotData():
         print("type: ",        self.type,         '\n',
               "x: ",           self.x,            '\n',
               "y: ",           self.y,            '\n',
+              "xerr_mode: ",   self.xerr_mode,    '\n',
               "xerr: ",        self.xerr,         '\n',
+              "yerr_mode: ",   self.yerr_mode,    '\n',
               "yerr: ",        self.yerr,         '\n',
               "axes_labels: ", self.axes_labels,  '\n',
               "axes_pupils: ", self.axes_pupils,  '\n',
@@ -66,14 +70,32 @@ class JsonParser:
         pltype = subplot["type"]
         x = np.array(subplot["x"])
         y = np.array(subplot["y"])
-        xerr = np.array(subplot["xerr"])
-        yerr = np.array(subplot["yerr"])
+        xerr_mode = subplot["xerr_mode"]
+        yerr_mode = subplot["yerr_mode"]
+        if xerr_mode == "absolute":
+            xerr = np.array(subplot["xerr"])
+        elif xerr_mode == "constant":
+            xerr = np.array([float(subplot["xerr"]) for i in x])
+        elif xerr_mode == "relative":
+            xerr = np.array([float(subplot["xerr"]) * i for i in x])
+        else:
+            print("\nWARNING: considering xerr as \"absolute\"")
+            xerr = np.array(subplot["xerr"])
+        if yerr_mode == "absolute":
+            yerr = np.array(subplot["yerr"])
+        elif yerr_mode == "constant":
+            yerr = np.array([float(subplot["yerr"]) for i in y])
+        elif yerr_mode == "relative":
+            yerr = np.array([float(subplot["yerr"]) * i for i in y])
+        else:
+            print("\nWARNING: considering yerr as \"absolute\"")
+            yerr = np.array(subplot["yerr"])
         axes_labels = subplot["axes_labels"]
         axes_pupils = subplot["axes_pupils"]
         color = subplot["color"]
         fmt = subplot["shape"]
         description = subplot["description"]
-        return RawSubplotData(pltype, x, y, xerr, yerr, axes_labels, axes_pupils, color, fmt, description)
+        return RawSubplotData(pltype, x, y, xerr_mode, xerr, yerr_mode, yerr, axes_labels, axes_pupils, color, fmt, description)
 
 class Plotter:
     @classmethod
@@ -180,4 +202,7 @@ except KeyError:
     input()
 except FileNotFoundError:
     print("\nData error: conf.json file not found near to main.py")
+    input()
+except ValueError:
+    print("\nData error: necessary subplot data is missing")
     input()
