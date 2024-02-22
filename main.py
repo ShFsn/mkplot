@@ -3,11 +3,12 @@ import json
 import os
 import matplotlib
 import matplotlib.pyplot as plt
+import codecs
 # from PIL import Image
 # matplotlib.use('Qt5Agg')
 
 class RawSubplotData():
-    def __init__(self, pltype, x, y, xerr, yerr, axes_labels, axes_pupils, color, description):
+    def __init__(self, pltype, x, y, xerr, yerr, axes_labels, axes_pupils, color, fmt, description):
         self.type = pltype
         self.color = color
         self.x = x
@@ -17,10 +18,11 @@ class RawSubplotData():
         self.axes_labels = axes_labels
         self.axes_pupils = axes_pupils
         self.color = color
+        self.fmt = fmt
         self.description = description
-    
+
     def print(self):
-        print("type: ",        self.pltype,       '\n',
+        print("type: ",        self.type,         '\n',
               "x: ",           self.x,            '\n',
               "y: ",           self.y,            '\n',
               "xerr: ",        self.xerr,         '\n',
@@ -28,12 +30,13 @@ class RawSubplotData():
               "axes_labels: ", self.axes_labels,  '\n',
               "axes_pupils: ", self.axes_pupils,  '\n',
               "color: ",       self.color,        '\n',
+              "shape: ",       self.fmt,          '\n',
               "description: ", self.description,  '\n')
 
 class JsonParser:
     @classmethod
     def read(self, filename):
-        with open(filename, "r") as read_file:
+        with codecs.open(filename, "r", "utf-8") as read_file:
             data = json.load(read_file)
         return data
 
@@ -58,8 +61,9 @@ class JsonParser:
         axes_labels = subplot["axes_labels"]
         axes_pupils = subplot["axes_pupils"]
         color = subplot["color"]
+        fmt = subplot["shape"]
         description = subplot["description"]
-        return RawSubplotData(pltype, x, y, xerr, yerr, axes_labels, axes_pupils, color, description)
+        return RawSubplotData(pltype, x, y, xerr, yerr, axes_labels, axes_pupils, color, fmt, description)
 
 class Plotter:
     @classmethod
@@ -68,18 +72,18 @@ class Plotter:
         fig = plt.figure()
         axes = [] 
         for i, plot in enumerate(plots):
-            f = open("generated_files/coefs.txt", 'a') 
+            f = codecs.open("generated_files/coefs.txt", 'a', "utf-8") 
             f.write(plot[1] + '\n\n')
             f.close()
             axes.append(fig.add_subplot(1, len(plots), i+1))
             for subplot in plot[0]:
                 Plotter.plot_subplot(axes[i], subplot)
             axes[i].set_title(plot[1])  
-        f = open("generated_files/coefs.txt", 'a') 
-        f.write('-----------------------------------------------------\n\n')
+        with codecs.open("generated_files/coefs.txt", 'a', "utf-8") as f:
+            f.write('-----------------------------------------------------\n\n')
         img = open("images/fig.png", 'w')
         plt.show()
-        fig.savefig("images/fig.png") 
+        fig.savefig("images/fig.png")
 
     @classmethod
     def plot_subplot(self, ax, s):
@@ -91,14 +95,21 @@ class Plotter:
         ax.set_ylabel(s.axes_labels[1] + ', ' + s.axes_pupils[1], fontsize=15) 
         r = np.linspace(0, 1.2*s.x[len(s.x)-1]) 
 
-        f = open("generated_files/coefs.txt", 'a')
+        f = codecs.open("generated_files/coefs.txt", 'a', "utf-8")
         if (s.type == 'lsq'):
             A = np.vstack([s.x, np.ones(len(s.y))]).T
-            k, b = np.linalg.lstsq(A, s.y, rcond=None)[0] 
-            sigma_k, sigma_b = Plotter.sigma_eval(s.x, s.y, k, b) 
-            f.write("lsq"+ ' ' + s.color+ ': k=' + str(k) + ' b='+str(b) + ' sigma_k='+str(sigma_k)+' sigma_b='+str(sigma_b)+'\n\n')
+            k, b = np.linalg.lstsq(A, s.y, rcond=None)[0]
+            sigma_k, sigma_b = Plotter.sigma_eval(s.x, s.y, k, b)
+            f.write(s.type + ' ' + s.color + ' "' + s.fmt + '"' +\
+                    ': k=' + str(k) + ' b='+str(b) + ' sigma_k='+str(sigma_k)+' sigma_b='+str(sigma_b)+'\n\n')
             ax.plot(r, k*r+b, color=s.color, label=s.description, linewidth=1)
-            ax.errorbar(s.x, s.y, s.yerr, s.xerr, fmt='o', markersize=3, linewidth=1, color=s.color, ecolor='black', capsize=0)
+            ax.errorbar(s.x, s.y, s.yerr, s.xerr, fmt=s.fmt, markersize=3, linewidth=1, color=s.color, ecolor=s.color, capsize=0)
+            
+        elif (s.type == 'dots'):
+            A = np.vstack([s.x, np.ones(len(s.y))]).T
+            k, b = np.linalg.lstsq(A, s.y, rcond=None)[0]
+            sigma_k, sigma_b = Plotter.sigma_eval(s.x, s.y, k, b)
+            ax.errorbar(s.x, s.y, s.yerr, s.xerr, fmt=s.fmt, markersize=3, linewidth=1, color=s.color, label=s.description, ecolor=s.color, capsize=0)
         
         elif (s.type == 'log'):
             x = np.log(s.x)
@@ -107,36 +118,35 @@ class Plotter:
             A = np.vstack([x, np.ones(len(y))]).T
             k, b = np.linalg.lstsq(A, y, rcond=None)[0] 
             sigma_k, sigma_b = Plotter.sigma_eval(x, y, k, b) 
-            f.write("lsq"+ ' ' + s.color+ ': k=' + str(k) + ' b='+str(b) + ' sigma_k='+str(sigma_k)+' sigma_b='+str(sigma_b)+'\n\n')
+            f.write(s.type + ' ' + s.color + ' "' + s.fmt + '"' +\
+                    ': k=' + str(k) + ' b='+str(b) + ' sigma_k='+str(sigma_k)+' sigma_b='+str(sigma_b)+'\n\n')
             ax.plot(v, k*v+b, color=s.color, label=s.description, linewidth=1) 
-            ax.errorbar(x, y, fmt='o', markersize=3, linewidth=1, color=s.color, ecolor='black', capsize=0)
+            ax.errorbar(x, y, fmt=s.fmt, markersize=3, linewidth=1, color=s.color, ecolor=s.color, capsize=0)
 
         elif (s.type.rstrip('_0123456789') == 'poly'):
             coefs = np.polyfit(s.x, s.y, int(s.type.split('_')[1]))
             ys = np.zeros(len(r))
             for i, c in enumerate(coefs):
-                ys += c * r ** (len(coefs)-i-1) 
-            f.write("lsq"+ ' ' + s.color+ ":\n")
+                ys += c * r ** (len(coefs)-i-1)
+            f.write(s.type + ' ' + s.color + ' "' + s.fmt + '"' + ":\n")
             for i, c in enumerate(coefs):
                 f.write("a_"+str(len(coefs)-i-1) + "=" + str(c) + '\n')
             f.write('\n')
             ax.plot(r, ys, color=s.color, label=s.description, linewidth=1)
-            ax.errorbar(s.x, s.y, s.yerr, s.xerr, fmt='o', markersize=3, linewidth=1, color=s.color, ecolor='black', capsize=0)
+            ax.errorbar(s.x, s.y, s.yerr, s.xerr, fmt=s.fmt, markersize=3, linewidth=1, color=s.color, ecolor=s.color, capsize=0)
         ax.legend()
         f.close()
-    
+
     @staticmethod 
     def makedirs():
         if not os.path.exists('generated_files'):
-            os.mkdir('generated_files');
-        # if os.path.exists('generated_files/coefs.txt'):
-        #     with open("generated_files/coefs.txt", 'w') as fopen:
-        #         fopen.close()
-        fopen = open("generated_files/coefs.txt", 'a')
+            os.mkdir('generated_files')
+        fopen = codecs.open("generated_files/coefs.txt", 'a', "utf-8")
         fopen.write('-----------------------------------------------------\n\n')
+        fopen.close()
         if not os.path.isdir('images'):
             os.mkdir('images')
-    
+
     @classmethod
     def sigma_eval(self, x, y, k, b):
         xdisp = np.var(x)
