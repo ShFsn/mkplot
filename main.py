@@ -4,13 +4,13 @@ import codecs
 try:
     import numpy as np
 except ModuleNotFoundError:
-    print('\nNumPy not found, installing...\n')
+    print('\n\nNumPy not found, installing...\n\n')
     os.system("python -m pip install numpy")
     import numpy as np
 try:
     import matplotlib
 except ModuleNotFoundError:
-    print('\nMatPlotLib not found, installing...\n')
+    print('\n\nMatPlotLib not found, installing...\n\n')
     os.system("python -m pip install matplotlib")
     import matplotlib
 import matplotlib.pyplot as plt
@@ -165,6 +165,19 @@ class Plotter:
         sigma_b = sigma_k * np.sqrt(np.average(x * x))
         return (sigma_k, sigma_b)
 
-data = JsonParser.read("conf.json")
-plots = JsonParser.parse_object(data)
-Plotter.plot(plots)
+try:
+    data = JsonParser.read("conf.json")
+    plots = JsonParser.parse_object(data)
+    Plotter.plot(plots)
+except TypeError:
+    print("\nData error: check that number of points in x, y, xerr and yerr matches")
+    input()
+except json.decoder.JSONDecodeError:
+    print("\nData error: check that all points in x, y, xerr and yerr are floating-point numbers")
+    input()
+except KeyError:
+    print("\nData error: something necessary is missing in conf.json")
+    input()
+except FileNotFoundError:
+    print("\nData error: conf.json file not found near to main.py")
+    input()
