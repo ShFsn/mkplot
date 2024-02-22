@@ -36,6 +36,11 @@ except ModuleNotFoundError:
         input("\nCannot go further")
 # from PIL import Image
 # matplotlib.use('Qt5Agg')
+        
+fig_size_h = 0
+fig_size_w = 0
+fig_dpi = 0
+fig_format = 'png'
 
 class RawSubplotData():
     def __init__(self, pltype, x, y, xerr_mode, xerr, yerr_mode, yerr, axes_labels, axes_pupils, color, fmt, description):
@@ -121,7 +126,10 @@ class Plotter:
     @classmethod
     def plot(self, plots):
         self.makedirs()
-        fig = plt.figure()
+        if fig_size_w and fig_size_h:
+            fig = plt.figure(figsize=(fig_size_w, fig_size_h))
+        else:
+            fig = plt.figure()
         axes = [] 
         for i, plot in enumerate(plots):
             f = codecs.open("generated_files/coefs.txt", 'a', "utf-8") 
@@ -130,12 +138,15 @@ class Plotter:
             axes.append(fig.add_subplot(1, len(plots), i+1))
             for subplot in plot[0]:
                 Plotter.plot_subplot(axes[i], subplot)
-            axes[i].set_title(plot[1])  
+            axes[i].set_title(plot[1])
         with codecs.open("generated_files/coefs.txt", 'a', "utf-8") as f:
             f.write('-----------------------------------------------------\n\n')
-        img = open("images/fig.png", 'w')
+        img = open("images/fig."+fig_format, 'w')
         plt.show()
-        fig.savefig("images/fig.png")
+        if fig_dpi:
+            fig.savefig("images/fig."+fig_format, fig_dpi=fig_dpi, fig_format=fig_format)
+        else:
+            fig.savefig("images/fig."+fig_format, fig_format=fig_format)
 
     @classmethod
     def plot_subplot(self, ax, s):
@@ -206,6 +217,19 @@ class Plotter:
         sigma_k = np.sqrt((ydisp/xdisp - k ** 2) / (len(x)-2))
         sigma_b = sigma_k * np.sqrt(np.average(x * x))
         return (sigma_k, sigma_b)
+    
+
+if len(sys.argv) > 1:
+    for arg in sys.argv[1:]:
+        args = arg.split('=')
+        if len(args) > 1:
+            if args[0] == '--size' and len(args[1].split("x")) > 1:
+                fig_size_w = float(args[1].split("x")[0])
+                fig_size_h = float(args[1].split("x")[1])
+            if args[0] == '--dpi':
+                fig_dpi = float(args[1])
+            if args[0] == '--format':
+                fig_format = args[1]
 
 try:
     if deps_installed:
