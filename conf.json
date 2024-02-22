@@ -1,6 +1,7 @@
 {
     "data" : [
         {
+            "title" : "",
             "subplots" : [
                 {
                     "type" : "lsq",
@@ -11,7 +12,8 @@
                     "axes_labels" : ["dx", "F"],
                     "axes_pupils" : ["м", "Н"],
                     "color" : "red",
-                    "description" : "spring characteristic" 
+                    "shape" : "o",
+                    "description" : "spring characteristic"
                 } 
             ]
         }
