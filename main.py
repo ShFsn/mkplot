@@ -1,19 +1,39 @@
 import os
+import sys
+import subprocess
 import json
 import codecs
+deps_installed = True
 try:
     import numpy as np
 except ModuleNotFoundError:
-    print('\n\nNumPy not found, installing...\n\n')
-    os.system("python -m pip install numpy")
-    import numpy as np
+    deps_installed = False
+    do_it = input('\n\nNumPy not found, do you want to install? [y/n] ')
+    while not do_it.lower() in ['y', 'n', 'yes', 'no']:
+        print("Wrong input, try again")
+        do_it = input('\n\nMatPlotLib not found, do you want to install? [y/n] ')
+    if do_it in ['y', 'yes']:
+        deps_installed = True
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'numpy'])
+        import numpy as np
+    else:
+        input("\nCannot go further")
 try:
     import matplotlib
+    import matplotlib.pyplot as plt
 except ModuleNotFoundError:
-    print('\n\nMatPlotLib not found, installing...\n\n')
-    os.system("python -m pip install matplotlib")
-    import matplotlib
-import matplotlib.pyplot as plt
+    deps_installed = False
+    do_it = input('\n\nMatPlotLib not found, do you want to install? [y/n] ')
+    while not do_it.lower() in ['y', 'n', 'yes', 'no']:
+        print("Wrong input, try again")
+        do_it = input('\n\nMatPlotLib not found, do you want to install? [y/n] ')
+    if do_it in ['y', 'yes']:
+        deps_installed = True
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'matplotlib'])
+        import matplotlib
+        import matplotlib.pyplot as plt
+    else:
+        input("\nCannot go further")
 # from PIL import Image
 # matplotlib.use('Qt5Agg')
 
@@ -61,7 +81,7 @@ class JsonParser:
             array = []
             subplots = plot["subplots"]
             for subplot in subplots:
-                array.append(JsonParser.parse_subplot(subplot)) 
+                array.append(JsonParser.parse_subplot(subplot))
             plots.append((array, plot["title"]))
         return plots
 
@@ -188,9 +208,10 @@ class Plotter:
         return (sigma_k, sigma_b)
 
 try:
-    data = JsonParser.read("conf.json")
-    plots = JsonParser.parse_object(data)
-    Plotter.plot(plots)
+    if deps_installed:
+        data = JsonParser.read("conf.json")
+        plots = JsonParser.parse_object(data)
+        Plotter.plot(plots)
 except TypeError:
     print("\nData error: check that number of points in x, y, xerr and yerr matches")
     input()
