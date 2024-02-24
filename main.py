@@ -144,9 +144,9 @@ class Plotter:
         img = open("images/fig."+fig_format, 'w')
         plt.show()
         if fig_dpi:
-            fig.savefig("images/fig."+fig_format, fig_dpi=fig_dpi, fig_format=fig_format)
+            fig.savefig("images/fig."+fig_format, fig_dpi=fig_dpi, format=fig_format)
         else:
-            fig.savefig("images/fig."+fig_format, fig_format=fig_format)
+            fig.savefig("images/fig."+fig_format, format=fig_format)
 
     @classmethod
     def plot_subplot(self, ax, s):
