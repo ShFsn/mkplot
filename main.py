@@ -167,7 +167,7 @@ class Plotter:
         ax.grid(True, which='minor', linewidth=0.5)
         ax.set_xlabel(s.axes_labels[0] + ', ' + s.axes_pupils[0], fontsize=15)
         ax.set_ylabel(s.axes_labels[1] + ', ' + s.axes_pupils[1], fontsize=15)
-        r = np.linspace(0, 1.2*s.x[len(s.x)-1])
+        r = np.linspace(min(s.x) - 0.2*(max(s.x)-min(s.x)), max(s.x) + 0.2*(max(s.x)-min(s.x)))
 
         f = codecs.open("generated_files/coefs.txt", 'a', "utf-8")
         if s.type == 'lsq':
@@ -191,7 +191,7 @@ class Plotter:
         elif s.type == 'log':
             x = np.log(s.x)
             y = np.log(s.y)
-            v = np.linspace(0, 1.2*x[len(x)-1])
+            v = np.linspace(min(x) - 0.2*(max(x)-min(x)), max(x) + 0.2*(max(x)-min(x)))
             A = np.vstack([x, np.ones(len(y))]).T
             k, b = np.linalg.lstsq(A, y, rcond=None)[0] 
             sigma_k, sigma_b = Plotter.sigma_eval(x, y, k, b) 
