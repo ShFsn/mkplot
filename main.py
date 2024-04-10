@@ -45,9 +45,10 @@ fig_dpi = 0
 fig_format = 'png'
 
 class RawSubplotData():
-    def __init__(self, pltype, x, y, xerr_mode, xerr, yerr_mode, yerr,
+    def __init__(self, pltype, plzero, x, y, xerr_mode, xerr, yerr_mode, yerr,
                 axes_labels, axes_pupils, color, fmt, description):
         self.type = pltype
+        self.zero = plzero
         self.color = color
         self.x = x
         self.y = y
@@ -63,6 +64,7 @@ class RawSubplotData():
 
     def print(self):
         print("type: ",        self.type,         '\n',
+            "zero: ",        self.zero,          '\n',
             "x: ",           self.x,            '\n',
             "y: ",           self.y,            '\n',
             "xerr_mode: ",   self.xerr_mode,    '\n',
@@ -96,6 +98,10 @@ class JsonParser:
     @classmethod
     def parse_subplot(self, subplot):
         pltype = subplot["type"]
+        plzero = False
+        if pltype.split('_')[-1] == 'zero':
+            plzero = True
+            pltype = '_'.join(pltype.split('_')[:-1])
         x = np.array(subplot["x"])
         y = np.array(subplot["y"])
         if pltype == "plot":
@@ -130,7 +136,7 @@ class JsonParser:
         axes_labels = subplot["axes_labels"]
         axes_pupils = subplot["axes_pupils"]
         description = subplot["description"]
-        return RawSubplotData(pltype, x, y, xerr_mode, xerr, yerr_mode, yerr,
+        return RawSubplotData(pltype, plzero, x, y, xerr_mode, xerr, yerr_mode, yerr,
                             axes_labels, axes_pupils, color, fmt, description)
 
 class Plotter:
@@ -161,19 +167,31 @@ class Plotter:
 
     @classmethod
     def plot_subplot(self, ax, s):
+        x = np.log(s.x) if 'log' in s.type.split('_') and 'x' in s.type.split('_') else s.x
+        y = np.log(s.y) if 'log' in s.type.split('_') and 'y' in s.type.split('_') else s.y
+        if s.zero:
+            _x = np.append(x, x * -1)
+            _y = np.append(y, y * -1)
+        else:
+            _x = x
+            _y = y
         # ax.scatter(0, 0, color='white')
         ax.minorticks_on()
         ax.grid(True, which='major', linewidth=1)
         ax.grid(True, which='minor', linewidth=0.5)
         ax.set_xlabel(s.axes_labels[0] + ', ' + s.axes_pupils[0], fontsize=15)
         ax.set_ylabel(s.axes_labels[1] + ', ' + s.axes_pupils[1], fontsize=15)
-        r = np.linspace(min(s.x) - 0.2*(max(s.x)-min(s.x)), max(s.x) + 0.2*(max(s.x)-min(s.x)))
+        border_left = min(x) - 0.2*(max(x)-min(x))
+        border_left = 0 if border_left > 0 and s.zero else border_left
+        border_right = max(x) + 0.2*(max(x)-min(x))
+        border_right = 0 if border_right < 0 and s.zero else border_right
+        r = np.linspace(border_left, border_right)
 
         f = codecs.open("generated_files/coefs.txt", 'a', "utf-8")
         if s.type == 'lsq':
-            A = np.vstack([s.x, np.ones(len(s.y))]).T
-            k, b = np.linalg.lstsq(A, s.y, rcond=None)[0]
-            sigma_k, sigma_b = Plotter.sigma_eval(s.x, s.y, k, b)
+            A = np.vstack([_x, np.ones(len(_y))]).T
+            k, b = np.linalg.lstsq(A, _y, rcond=None)[0]
+            sigma_k, sigma_b = Plotter.sigma_eval(_x, _y, k, b)
             f.write(s.type + ' ' + s.color + ' "' + s.fmt + '"' +\
                     ': k=' + str(k) + ' b='+str(b) + ' sigma_k='+\
                         str(sigma_k)+' sigma_b='+str(sigma_b)+'\n\n')
@@ -182,28 +200,22 @@ class Plotter:
                         linewidth=1, color=s.color, ecolor=s.color, capsize=0)
 
         elif s.type == 'dots':
-            A = np.vstack([s.x, np.ones(len(s.y))]).T
-            k, b = np.linalg.lstsq(A, s.y, rcond=None)[0]
-            sigma_k, sigma_b = Plotter.sigma_eval(s.x, s.y, k, b)
             ax.errorbar(s.x, s.y, s.yerr, s.xerr, fmt=s.fmt, markersize=3, linewidth=1,
                         color=s.color, label=s.description, ecolor=s.color, capsize=0)
 
-        elif s.type == 'log':
-            x = np.log(s.x)
-            y = np.log(s.y)
-            v = np.linspace(min(x) - 0.2*(max(x)-min(x)), max(x) + 0.2*(max(x)-min(x)))
-            A = np.vstack([x, np.ones(len(y))]).T
-            k, b = np.linalg.lstsq(A, y, rcond=None)[0] 
-            sigma_k, sigma_b = Plotter.sigma_eval(x, y, k, b) 
+        elif 'log' in s.type.split('_'):
+            A = np.vstack([_x, np.ones(len(_y))]).T
+            k, b = np.linalg.lstsq(A, _y, rcond=None)[0] 
+            sigma_k, sigma_b = Plotter.sigma_eval(_x, _y, k, b)
             f.write(s.type + ' ' + s.color + ' "' + s.fmt + '"' +\
                     ': k=' + str(k) + ' b='+str(b) + ' sigma_k='+\
                     str(sigma_k)+' sigma_b='+str(sigma_b)+'\n\n')
-            ax.plot(v, k*v+b, color=s.color, label=s.description, linewidth=1)
+            ax.plot(r, k*r+b, color=s.color, label=s.description, linewidth=1)
             ax.errorbar(x, y, fmt=s.fmt, markersize=3, linewidth=1,
                         color=s.color, ecolor=s.color, capsize=0)
 
         elif s.type.rstrip('_0123456789') == 'poly':
-            coefs = np.polyfit(s.x, s.y, int(s.type.split('_')[1]))
+            coefs = np.polyfit(_x, _y, int(s.type.split('_')[1]))
             ys = np.zeros(len(r))
             for i, c in enumerate(coefs):
                 ys += c * r ** (len(coefs)-i-1)
