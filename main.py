@@ -252,19 +252,25 @@ class Plotter:
         return (sigma_k, sigma_b)
 
 
+manual_req = False
 if len(sys.argv) > 1:
     for arg in sys.argv[1:]:
-        args = arg.split('=')
-        if len(args) > 1:
-            if args[0] == '--size' and len(args[1].split("x")) > 1:
-                fig_size_w = float(args[1].split("x")[0])
-                fig_size_h = float(args[1].split("x")[1])
-            if args[0] == '--dpi':
-                fig_dpi = float(args[1])
-            if args[0] == '--format':
-                fig_format = args[1]
+        if arg in ['-h', '--help', 'man', '--man']:
+            with codecs.open("README.md", 'r', 'utf-8') as f:
+                print(f"\n\n\n{f.read()}\n\n\n")
+            manual_req = True
+        else:
+            args = arg.split('=')
+            if len(args) > 1:
+                if args[0] == '--size' and len(args[1].split("x")) > 1:
+                    fig_size_w = float(args[1].split("x")[0])
+                    fig_size_h = float(args[1].split("x")[1])
+                if args[0] == '--dpi':
+                    fig_dpi = float(args[1])
+                if args[0] == '--format':
+                    fig_format = args[1]
 
-if __name__ == "__main__":
+if __name__ == "__main__" and not manual_req:
     try:
         if deps_installed:
             data = JsonParser.read("conf.json")
