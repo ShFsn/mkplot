@@ -38,7 +38,7 @@
                     "axes_pupils" : ["м", "Н"],
                     "color" : "red",
                     "shape" : "o",
-                    "description" : "пример полинома степени 5"
+                    "description" : "пример полинома степени 4"
                 },
                 {
                     "type" : "lsq",
